@@ -1,0 +1,45 @@
+{
+  "name": "@mostajs/cloud-middleware",
+  "version": "0.1.0",
+  "description": "Cloud middleware for @mostajs/net: API key resolution, quota enforcement, project routing",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js",
+      "default": "./dist/server.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "tsx test-scripts/test-unit.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "author": "Dr Hamid MADANI <drmdh@msn.com>",
+  "license": "MIT",
+  "peerDependencies": {
+    "@mostajs/api-keys": ">=0.1.0",
+    "@mostajs/orm": "^1.8.0",
+    "@mostajs/project-life": ">=0.1.0",
+    "@mostajs/subscriptions-plan": ">=0.1.0"
+  },
+  "devDependencies": {
+    "@mostajs/orm": "^1.8.0",
+    "@types/node": "^22.0.0",
+    "better-sqlite3": "^12.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0"
+  }
+}
