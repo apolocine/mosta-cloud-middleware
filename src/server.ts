@@ -4,6 +4,10 @@
 // Main middleware
 export { createCloudMiddleware } from './middleware/cloud.js'
 
+// Auto-init from env (connect to portal DB + create middleware)
+export { initCloudFromEnv } from './lib/cloud-init.js'
+export type { CloudProcessRequest } from './lib/cloud-init.js'
+
 // Rate limiter
 export { RateLimiter } from './middleware/rate-limiter.js'
 
