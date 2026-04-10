@@ -65,6 +65,7 @@ export async function initCloudFromEnv(pm?: any): Promise<CloudProcessRequest | 
   // Import portal schemas from peer modules
   const schemas: any[] = [AccountSchema]
   try {
+    // @ts-ignore — peer dependency, loaded at runtime
     const subPlan = await import('@mostajs/subscriptions-plan')
     schemas.push(subPlan.PlanSchema, subPlan.SubscriptionSchema)
     if (subPlan.InvoiceSchema) schemas.push(subPlan.InvoiceSchema)
@@ -75,6 +76,7 @@ export async function initCloudFromEnv(pm?: any): Promise<CloudProcessRequest | 
   }
 
   try {
+    // @ts-ignore — peer dependency
     const apiKeys = await import('@mostajs/api-keys')
     schemas.push(apiKeys.ApiKeySchema)
   } catch (e: any) {
@@ -83,6 +85,7 @@ export async function initCloudFromEnv(pm?: any): Promise<CloudProcessRequest | 
   }
 
   try {
+    // @ts-ignore — peer dependency
     const projectLife = await import('@mostajs/project-life')
     schemas.push(projectLife.ProjectSchema)
   } catch {
@@ -91,11 +94,13 @@ export async function initCloudFromEnv(pm?: any): Promise<CloudProcessRequest | 
 
   // Connect to portal database (isolated from consumer's own DB)
   try {
-    const { createIsolatedDialect } = await import('@mostajs/orm')
+    const { createIsolatedDialect, registerNamedConnection } = await import('@mostajs/orm')
     const portalDb = await createIsolatedDialect(
       { dialect: portalDialect as any, uri: portalUri, schemaStrategy: 'none' },
       schemas,
     )
+    // Register for reuse by other components (e.g., project filtering)
+    registerNamedConnection('cloud-portal', portalDb)
 
     const mw = createCloudMiddleware(portalDb, pm)
     console.log(`  Cloud middleware: ready (portal: ${portalDialect}, ${schemas.length} schemas)`)

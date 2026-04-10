@@ -1,6 +1,6 @@
 {
   "name": "@mostajs/cloud-middleware",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Cloud middleware for @mostajs/net: API key resolution, quota enforcement, project routing",
   "type": "module",
   "main": "dist/index.js",
@@ -36,7 +36,7 @@
     "@mostajs/subscriptions-plan": ">=0.1.0"
   },
   "devDependencies": {
-    "@mostajs/orm": "^1.8.0",
+    "@mostajs/orm": "^1.9.1",
     "@types/node": "^22.0.0",
     "better-sqlite3": "^12.0.0",
     "tsx": "^4.0.0",
