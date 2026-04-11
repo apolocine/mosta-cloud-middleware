@@ -12,18 +12,19 @@
 
 import { createCloudMiddleware } from '../middleware/cloud.js'
 
-// Account schema (same as octonet-cloud portal)
-const AccountSchema = {
-  name: 'Account',
-  collection: 'accounts',
+// User schema — loaded from @mostajs/rbac at runtime
+// Fallback inline schema in case rbac not installed
+const FallbackUserSchema = {
+  name: 'User',
+  collection: 'users',
   timestamps: true,
   fields: {
     email: { type: 'string', required: true },
-    name: { type: 'string', required: true },
+    firstName: { type: 'string', required: true },
+    lastName: { type: 'string', required: true },
     password: { type: 'string', required: true },
-    role: { type: 'string', default: 'user' },
+    status: { type: 'string', default: 'active' },
     verified: { type: 'boolean', default: false },
-    banned: { type: 'boolean', default: false },
     stripeCustomerId: { type: 'string' },
     locale: { type: 'string', default: 'fr' },
   },
@@ -62,8 +63,18 @@ export async function initCloudFromEnv(pm?: any): Promise<CloudProcessRequest | 
 
   const portalDialect = process.env.PORTAL_DB_DIALECT ?? 'postgres'
 
-  // Import portal schemas from peer modules
-  const schemas: any[] = [AccountSchema]
+  // Import UserSchema from rbac, fallback to inline
+  let UserSchema: any = FallbackUserSchema
+  let RoleSchema: any = null
+  try {
+    // @ts-ignore — peer dependency
+    const rbac = await import('@mostajs/rbac')
+    UserSchema = rbac.UserSchema
+    RoleSchema = rbac.RoleSchema
+  } catch {}
+
+  const schemas: any[] = [UserSchema]
+  if (RoleSchema) schemas.push(RoleSchema)
   try {
     // @ts-ignore — peer dependency, loaded at runtime
     const subPlan = await import('@mostajs/subscriptions-plan')
