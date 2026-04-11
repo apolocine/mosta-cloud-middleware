@@ -63,19 +63,21 @@ export function createCloudMiddleware(dialect: any, pm?: any) {
       return { passed: false, response: { status: 401, body: { error: 'INVALID_API_KEY' } } }
     }
 
-    // Step 4 — Account lookup + check banned
+    // Step 4 — User/Account lookup + check status
     const { BaseRepository, getSchema } = await import('@mostajs/orm')
-    const accountSchema = getSchema('Account')
-    if (!accountSchema) {
-      return { passed: false, response: { status: 500, body: { error: 'ACCOUNT_SCHEMA_NOT_REGISTERED' } } }
+    // Support both User (rbac) and Account (legacy) schemas
+    const userSchema = getSchema('User') ?? getSchema('Account')
+    if (!userSchema) {
+      return { passed: false, response: { status: 500, body: { error: 'USER_SCHEMA_NOT_REGISTERED' } } }
     }
-    const accountRepo = new BaseRepository(accountSchema, dialect)
-    const account = await accountRepo.findById(apiKey.accountId ?? apiKey.account) as any
+    const userRepo = new BaseRepository(userSchema, dialect)
+    const account = await userRepo.findById(apiKey.accountId ?? apiKey.account) as any
 
     if (!account) {
       return { passed: false, response: { status: 403, body: { error: 'ACCOUNT_NOT_FOUND' } } }
     }
-    if (account.banned) {
+    // Check status (rbac: status field) or banned (legacy: banned field)
+    if (account.status === 'disabled' || account.status === 'locked' || account.banned) {
       return { passed: false, response: { status: 403, body: { error: 'ACCOUNT_SUSPENDED' } } }
     }
 
