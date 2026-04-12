@@ -1,6 +1,6 @@
 {
   "name": "@mostajs/cloud-middleware",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Cloud middleware for @mostajs/net: API key resolution, quota enforcement, project routing",
   "type": "module",
   "main": "dist/index.js",
