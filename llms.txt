@@ -1,0 +1,76 @@
+# @mostajs/cloud-middleware — fiche LLM
+> Middleware cloud pour @mostajs/net — résolution de clé API, application des quotas, routage par projet.
+
+- Version: 0.2.3 · Licence: AGPL-3.0-or-later · Auteur: Dr Hamid MADANI <drmdh@msn.com>
+- Chemin: mostajs/mosta-cloud-middleware · Statut audit: complet (dist/)
+
+## RÔLE
+Couche de contrôle d'accès « cloud » insérée devant @mostajs/net. Pour chaque requête :
+résout la clé API entrante en compte / abonnement / plan, vérifie les quotas (rate
+limiting), résout le projet cible et construit un CloudContext attaché à la requête.
+S'initialise depuis l'environnement (base portail) et se branche sur le cloudHook de
+@mostajs/net. C'est l'application des règles de plan définies par @mostajs/cloud-config.
+
+## INSTALLATION
+npm i @mostajs/cloud-middleware
+
+## EXPORTS
+- Racine: moduleInfo, types CloudContext, CloudConfig, CloudRequest, CloudResponse, CloudNext, CloudMiddlewareResult, CorsConfig
+- Server: createCloudMiddleware, initCloudFromEnv, RateLimiter, getCorsHeaders, extractApiKey, extractProjectSlug, extractTransport, hasCloudContext, getSchemas, moduleInfo, cloudMiddlewareRegistration ; type CloudProcessRequest, CorsConfig
+
+## EXPORTS PAR SOUS-CHEMIN
+- @mostajs/cloud-middleware (racine) : types seulement (CloudContext, CloudConfig, CloudRequest…) + moduleInfo. Sûr côté navigateur/typage.
+- @mostajs/cloud-middleware/server : implémentation à effet de bord (DB, env) — createCloudMiddleware, initCloudFromEnv, RateLimiter, helpers d'extraction, enregistrement de module.
+
+## API — SIGNATURES
+- createCloudMiddleware(dialect, pm?): { processRequest }
+  processRequest(rawKey: string|undefined, projectSlug, transport, method, body?, ip?): Promise<CloudMiddlewareResult>
+  // requiert les repos: Account, ApiKey, Subscription, Plan, UsageLog, Project (via peers)
+- initCloudFromEnv(pm?): Promise<CloudProcessRequest | null>
+  // connecte la DB portail, importe les schémas, retourne processRequest ; null si non configuré
+- RateLimiter: new RateLimiter({ windowMs?, maxRequests? })
+  .check(key, limit?): { allowed: boolean; remaining: number; resetAt: number }
+  .reset(key) ; .cleanup() ; get size
+- getCorsHeaders(...): en-têtes CORS ; CorsConfig
+- extractApiKey(headers): string | undefined
+- extractProjectSlug(path): string | undefined ; extractTransport(path): string | undefined
+- hasCloudContext(req): req is { cloud: CloudContext }  // type guard
+
+## TYPES CLÉS
+- CloudContext { account; apiKey; plan; project; subscription; mprojectName: string }
+- CloudConfig { dialect; pm?; encKey?: Buffer }  // dialect = instance ORM du portail, encKey = clé de déchiffrement d'URI
+- CloudRequest { headers; params; query; body?; method; ip?; url; cloud?: CloudContext }
+- CloudResponse { status: number; body: any }
+- CloudNext = () => Promise<void> | void
+- CloudMiddlewareResult { passed: boolean; response?: CloudResponse; context?: CloudContext }
+- CloudProcessRequest = (rawKey?, projectSlug, transport, method, body?, ip?) => Promise<{ passed; response?; context? }>
+
+## PATTERN
+```ts
+import { initCloudFromEnv } from '@mostajs/cloud-middleware/server';
+import { cloudHook } from '@mostajs/net/middleware/cloud-hook';
+
+const processRequest = await initCloudFromEnv(pm);
+if (processRequest) cloudHook.setMiddleware(processRequest);  // branché sur @mostajs/net
+```
+Rate limiting manuel :
+```ts
+import { RateLimiter } from '@mostajs/cloud-middleware/server';
+const rl = new RateLimiter({ windowMs: 60_000, maxRequests: 100 });
+const { allowed, remaining } = rl.check(apiKeyHash);
+```
+
+## DÉPEND DE
+Peers @mostajs/* : @mostajs/orm (^1.8.0), @mostajs/api-keys (>=0.1.0), @mostajs/project-life (>=0.1.0), @mostajs/subscriptions-plan (>=0.1.0). Conçu pour fonctionner avec @mostajs/net (via son cloudHook) et @mostajs/cloud-config (définition des plans).
+
+## PIÈGES
+- initCloudFromEnv() retourne null si la config (DB portail, env) est absente : toujours tester le retour avant cloudHook.setMiddleware.
+- La signature processRequest est positionnelle (rawKey, projectSlug, transport, method, body?, ip?) — respecter l'ordre exact ; elle correspond à CloudMiddlewareFn de @mostajs/net.
+- createCloudMiddleware exige que les repos Account/ApiKey/Subscription/Plan/UsageLog/Project soient résolvables via les peers ; absence de peer = échec runtime.
+- Les types de la racine utilisent largement `any` (account, apiKey, plan, project, dialect) — typage volontairement lâche, le typage fort vient des modules peers.
+- CloudConfig.encKey est un Buffer (déchiffrement d'URI), pas une string.
+- Importer l'implémentation depuis /server ; la racine n'expose que des types.
+
+## RÉFÉRENCES
+- README.md
+- test-scripts/test-unit.ts
